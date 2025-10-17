@@ -1,4 +1,3 @@
--- Auto Coin Farm Script
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -7,31 +6,50 @@ local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
--- Script variables
+
 local autoFarmEnabled = false
 local currentTarget = nil
-local coinContainer = nil
-local coinParts = {}
+local collectibleContainer = nil
+local collectibleParts = {}
 local connection = nil
-local stayDuration = 2 -- Default stay time
-local coinsCollected = 0
-local coinContainerSearchAttempts = 0
+local stayDuration = 2 
+local itemsCollected = 0
+local containerSearchAttempts = 0
 local farmingLoop = nil
 local isMinimized = false
 
--- Create GUI with persistence
+local CollectibleNames = {"Coin_Server"}
+local VisualPartNames = {"CoinVisual"} 
+local ContainerName = "CoinContainer" 
+
+local function removeCameraFade()
+    while true do
+
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui then
+            local cameraFade = playerGui:FindFirstChild("CameraFade")
+            if cameraFade then
+                cameraFade:Destroy()
+                
+            end
+        end
+        wait(10) 
+    end
+end
+
+spawn(removeCameraFade)
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AutoFarmGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player.PlayerGui
 
--- Main Container
 local mainContainer = Instance.new("Frame")
 mainContainer.Size = UDim2.new(0, 320, 0, 280)
-mainContainer.Position = UDim2.new(0.5, -160, 0.5, -140) -- Center of screen
+mainContainer.Position = UDim2.new(0.5, -160, 0.5, -140)
 mainContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 mainContainer.BorderSizePixel = 0
-mainContainer.BackgroundTransparency = 1 -- Start transparent for entrance animation
+mainContainer.BackgroundTransparency = 1
 mainContainer.Active = true
 mainContainer.Draggable = true
 mainContainer.Parent = screenGui
@@ -46,19 +64,18 @@ containerShadow.Position = UDim2.new(0, -7, 0, -7)
 containerShadow.BackgroundTransparency = 1
 containerShadow.Image = "rbxassetid://1316045217"
 containerShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-containerShadow.ImageTransparency = 1 -- Start transparent
+containerShadow.ImageTransparency = 1
 containerShadow.ScaleType = Enum.ScaleType.Slice
 containerShadow.SliceCenter = Rect.new(10, 10, 118, 118)
 containerShadow.Parent = mainContainer
 containerShadow.ZIndex = -1
 
--- Header
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 40)
 header.Position = UDim2.new(0, 0, 0, 0)
 header.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 header.BorderSizePixel = 0
-header.BackgroundTransparency = 1 -- Start transparent
+header.BackgroundTransparency = 1
 header.Parent = mainContainer
 
 local headerCorner = Instance.new("UICorner")
@@ -69,15 +86,14 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.7, 0, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "COIN FARMER"
+title.Text = "MM2 H25 Farm"
 title.TextColor3 = Color3.fromRGB(220, 220, 255)
 title.TextSize = 16
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.TextTransparency = 1 -- Start transparent
+title.TextTransparency = 1
 title.Parent = header
 
--- Minimize Button
 local minimizeButton = Instance.new("TextButton")
 minimizeButton.Size = UDim2.new(0, 30, 0, 30)
 minimizeButton.Position = UDim2.new(1, -35, 0.5, -15)
@@ -86,28 +102,26 @@ minimizeButton.Text = "-"
 minimizeButton.TextColor3 = Color3.fromRGB(200, 200, 220)
 minimizeButton.TextSize = 18
 minimizeButton.Font = Enum.Font.GothamBold
-minimizeButton.TextTransparency = 1 -- Start transparent
-minimizeButton.BackgroundTransparency = 1 -- Start transparent
+minimizeButton.TextTransparency = 1
+minimizeButton.BackgroundTransparency = 1
 minimizeButton.Parent = header
 
 local minimizeCorner = Instance.new("UICorner")
 minimizeCorner.CornerRadius = UDim.new(0, 6)
 minimizeCorner.Parent = minimizeButton
 
--- Content Frame
 local contentFrame = Instance.new("Frame")
 contentFrame.Size = UDim2.new(1, 0, 0, 220)
 contentFrame.Position = UDim2.new(0, 0, 0, 40)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainContainer
 
--- Status Section
 local statusSection = Instance.new("Frame")
 statusSection.Size = UDim2.new(1, -20, 0, 80)
 statusSection.Position = UDim2.new(0, 10, 0, 10)
 statusSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 statusSection.BorderSizePixel = 0
-statusSection.BackgroundTransparency = 1 -- Start transparent
+statusSection.BackgroundTransparency = 1
 statusSection.Parent = contentFrame
 
 local sectionCorner = Instance.new("UICorner")
@@ -123,7 +137,7 @@ statusLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
 statusLabel.TextSize = 12
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.TextTransparency = 1 -- Start transparent
+statusLabel.TextTransparency = 1
 statusLabel.Parent = statusSection
 
 local infoLabel = Instance.new("TextLabel")
@@ -136,16 +150,15 @@ infoLabel.TextSize = 10
 infoLabel.Font = Enum.Font.Gotham
 infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 infoLabel.TextWrapped = true
-infoLabel.TextTransparency = 1 -- Start transparent
+infoLabel.TextTransparency = 1
 infoLabel.Parent = statusSection
 
--- Stats Section
 local statsSection = Instance.new("Frame")
 statsSection.Size = UDim2.new(1, -20, 0, 50)
 statsSection.Position = UDim2.new(0, 10, 0, 100)
 statsSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 statsSection.BorderSizePixel = 0
-statsSection.BackgroundTransparency = 1 -- Start transparent
+statsSection.BackgroundTransparency = 1
 statsSection.Parent = contentFrame
 
 local statsCorner = Instance.new("UICorner")
@@ -156,21 +169,20 @@ local collectedLabel = Instance.new("TextLabel")
 collectedLabel.Size = UDim2.new(1, -10, 1, 0)
 collectedLabel.Position = UDim2.new(0, 10, 0, 0)
 collectedLabel.BackgroundTransparency = 1
-collectedLabel.Text = "Coins Collected: 0"
+collectedLabel.Text = "Candies Collected: 0"
 collectedLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 collectedLabel.TextSize = 14
 collectedLabel.Font = Enum.Font.GothamBold
 collectedLabel.TextXAlignment = Enum.TextXAlignment.Left
-collectedLabel.TextTransparency = 1 -- Start transparent
+collectedLabel.TextTransparency = 1
 collectedLabel.Parent = statsSection
 
--- Controls Section
 local controlsSection = Instance.new("Frame")
 controlsSection.Size = UDim2.new(1, -20, 0, 70)
 controlsSection.Position = UDim2.new(0, 10, 0, 160)
 controlsSection.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 controlsSection.BorderSizePixel = 0
-controlsSection.BackgroundTransparency = 1 -- Start transparent
+controlsSection.BackgroundTransparency = 1
 controlsSection.Parent = contentFrame
 
 local controlsCorner = Instance.new("UICorner")
@@ -186,7 +198,7 @@ durationLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
 durationLabel.TextSize = 11
 durationLabel.Font = Enum.Font.Gotham
 durationLabel.TextXAlignment = Enum.TextXAlignment.Left
-durationLabel.TextTransparency = 1 -- Start transparent
+durationLabel.TextTransparency = 1
 durationLabel.Parent = controlsSection
 
 local durationBox = Instance.new("TextBox")
@@ -198,8 +210,8 @@ durationBox.PlaceholderText = "Seconds"
 durationBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 durationBox.TextSize = 12
 durationBox.Font = Enum.Font.Gotham
-durationBox.TextTransparency = 1 -- Start transparent
-durationBox.BackgroundTransparency = 1 -- Start transparent
+durationBox.TextTransparency = 1
+durationBox.BackgroundTransparency = 1
 durationBox.Parent = controlsSection
 
 local boxCorner = Instance.new("UICorner")
@@ -210,19 +222,18 @@ local toggleButton = Instance.new("TextButton")
 toggleButton.Size = UDim2.new(1, -20, 0, 32)
 toggleButton.Position = UDim2.new(0, 10, 1, -40)
 toggleButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
-toggleButton.Text = "START FARMING"
+toggleButton.Text = "Start Farm"
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.TextSize = 13
 toggleButton.Font = Enum.Font.GothamBold
-toggleButton.TextTransparency = 1 -- Start transparent
-toggleButton.BackgroundTransparency = 1 -- Start transparent
+toggleButton.TextTransparency = 1
+toggleButton.BackgroundTransparency = 1
 toggleButton.Parent = controlsSection
 
 local buttonCorner = Instance.new("UICorner")
 buttonCorner.CornerRadius = UDim.new(0, 8)
 buttonCorner.Parent = toggleButton
 
--- Safe tween function
 local function createTween(object, properties, duration, easingStyle, easingDirection)
     local safeProperties = {}
     
@@ -247,7 +258,6 @@ local function createTween(object, properties, duration, easingStyle, easingDire
     return tween
 end
 
--- Entrance animation
 local function playEntranceAnimation()
     local containerFade = createTween(mainContainer, {BackgroundTransparency = 0.05}, 0.6)
     local shadowFade = createTween(containerShadow, {ImageTransparency = 0.85}, 0.6)
@@ -289,7 +299,6 @@ local function playEntranceAnimation()
     toggleButtonFade:Play()
 end
 
--- Minimize animation
 local function minimizeUI()
     if isMinimized then return end
     isMinimized = true
@@ -316,7 +325,6 @@ local function minimizeUI()
     infoLabel.Text = "Minimized - Click + to expand"
 end
 
--- Maximize animation
 local function maximizeUI()
     if not isMinimized then return end
     isMinimized = false
@@ -347,7 +355,6 @@ local function maximizeUI()
     end
 end
 
--- Toggle minimize/maximize
 local function toggleMinimize()
     if isMinimized then
         maximizeUI()
@@ -356,7 +363,6 @@ local function toggleMinimize()
     end
 end
 
--- Button animation function
 local function animateButton(button, targetColor, duration)
     local success = pcall(function()
         local current = button.BackgroundColor3
@@ -372,7 +378,6 @@ local function animateButton(button, targetColor, duration)
     end
 end
 
--- Function to safely get character parts
 local function getCharacterParts()
     if not player or not player.Character then
         return nil, nil, nil
@@ -385,19 +390,17 @@ local function getCharacterParts()
     return char, hum, root
 end
 
--- Function to update collected coins display
 local function updateCollectedDisplay()
-    collectedLabel.Text = "Coins Collected: " .. coinsCollected
+    collectedLabel.Text = "Items Collected: " .. itemsCollected
 end
 
--- Function to safely increment coins collected
-local lastCoinCollection = 0
-local function incrementCoinsCollected()
+local lastItemCollection = 0
+local function incrementItemsCollected()
     local currentTime = tick()
-    if currentTime - lastCoinCollection > 0.5 then
-        coinsCollected = coinsCollected + 1
+    if currentTime - lastItemCollection > 0.5 then
+        itemsCollected = itemsCollected + 1
         updateCollectedDisplay()
-        lastCoinCollection = currentTime
+        lastItemCollection = currentTime
         
         local originalSize = collectedLabel.TextSize
         local scaleUp = createTween(collectedLabel, {TextSize = originalSize + 3}, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -410,10 +413,9 @@ local function incrementCoinsCollected()
     end
 end
 
--- Function to find CoinContainer in workspace
-local function findCoinContainer()
+local function findCollectibleContainer()
     local function searchInModel(model)
-        if model and model.Name == "CoinContainer" then
+        if model and model.Name == ContainerName then
             return model
         end
         
@@ -433,43 +435,42 @@ local function findCoinContainer()
     return searchInModel(Workspace)
 end
 
--- Function to continuously search for CoinContainer
-local function continuousCoinContainerSearch()
+local function continuousContainerSearch()
     while true do
-        if not coinContainer or not coinContainer.Parent then
+        if not collectibleContainer or not collectibleContainer.Parent then
             local success, result = pcall(function()
-                return findCoinContainer()
+                return findCollectibleContainer()
             end)
             
             if success then
-                coinContainer = result
-                coinContainerSearchAttempts = coinContainerSearchAttempts + 1
+                collectibleContainer = result
+                containerSearchAttempts = containerSearchAttempts + 1
                 
-                if coinContainer then
+                if collectibleContainer then
                     if not isMinimized then
-                        infoLabel.Text = "CoinContainer found!"
+                        infoLabel.Text = ContainerName .. " found!"
                     end
-                    coinContainerSearchAttempts = 0
+                    containerSearchAttempts = 0
                 else
                     if autoFarmEnabled and not isMinimized then
-                        infoLabel.Text = "Searching for coins... (" .. coinContainerSearchAttempts .. ")"
+                        infoLabel.Text = "Searching for " .. ContainerName .. "... (" .. containerSearchAttempts .. ")"
                     end
                 end
             else
-                warn("Error searching for CoinContainer: " .. tostring(result))
+                warn("Error searching for " .. ContainerName .. ": " .. tostring(result))
                 if not isMinimized then
                     infoLabel.Text = "Search error, retrying..."
                 end
             end
         else
             local success, exists = pcall(function()
-                return coinContainer.Parent ~= nil
+                return collectibleContainer.Parent ~= nil
             end)
             
             if not success or not exists then
-                coinContainer = nil
+                collectibleContainer = nil
                 if not isMinimized then
-                    infoLabel.Text = "CoinContainer lost, searching..."
+                    infoLabel.Text = ContainerName .. " lost, searching..."
                 end
             end
         end
@@ -478,26 +479,34 @@ local function continuousCoinContainerSearch()
     end
 end
 
--- Function to find all Coin_Server parts and check their CoinVisual transparency
-local function findCoinParts(container)
+local function findCollectibleParts(container)
     if not container then return {} end
     
     local parts = {}
     
     local function searchForParts(model)
-        if model and model.Name == "Coin_Server" and model:IsA("BasePart") then
-            local hasVisibleCoin = false
-            for _, child in ipairs(model:GetDescendants()) do
-                if child and child.Name == "CoinVisual" and child:IsA("BasePart") then
-                    if child.Transparency < 1 then
-                        hasVisibleCoin = true
-                        break
+        if model:IsA("BasePart") then
+            for _, collectibleName in ipairs(CollectibleNames) do
+                if model.Name == collectibleName then
+        
+                    local hasVisibleVisual = false
+                    for _, visualName in ipairs(VisualPartNames) do
+                        for _, child in ipairs(model:GetDescendants()) do
+                            if child and child.Name == visualName and child:IsA("BasePart") then
+                                if child.Transparency < 1 then
+                                    hasVisibleVisual = true
+                                    break
+                                end
+                            end
+                        end
+                        if hasVisibleVisual then break end
                     end
+                    
+                    if hasVisibleVisual then
+                        table.insert(parts, model)
+                    end
+                    break
                 end
-            end
-            
-            if hasVisibleCoin then
-                table.insert(parts, model)
             end
         end
         
@@ -512,40 +521,41 @@ local function findCoinParts(container)
     return parts
 end
 
--- Function to check if a coin part has any visible CoinVisual
-local function hasVisibleCoinVisual(coinPart)
-    if not coinPart or not coinPart.Parent then return false end
+local function hasVisibleVisual(collectiblePart)
+    if not collectiblePart or not collectiblePart.Parent then return false end
     
-    for _, child in ipairs(coinPart:GetDescendants()) do
-        if child and child.Name == "CoinVisual" and child:IsA("BasePart") then
-            if child.Transparency < 1 then
-                return true
+    for _, visualName in ipairs(VisualPartNames) do
+        for _, child in ipairs(collectiblePart:GetDescendants()) do
+            if child and child.Name == visualName and child:IsA("BasePart") then
+                if child.Transparency < 1 then
+                    return true
+                end
             end
         end
     end
     return false
 end
 
--- Function to find nearest visible coin part
-local function findNearestCoin()
-    if not coinContainer then
+
+local function findNearestCollectible()
+    if not collectibleContainer then
         return nil
     end
     
     local char, hum, root = getCharacterParts()
     if not char or not root then return nil end
     
-    coinParts = findCoinParts(coinContainer)
+    collectibleParts = findCollectibleParts(collectibleContainer)
     
-    if #coinParts == 0 then
+    if #collectibleParts == 0 then
         return nil
     end
     
     local nearestPart = nil
     local nearestDistance = 500
     
-    for _, part in ipairs(coinParts) do
-        if part and part.Parent and hasVisibleCoinVisual(part) then
+    for _, part in ipairs(collectibleParts) do
+        if part and part.Parent and hasVisibleVisual(part) then
             local distance = (root.Position - part.Position).Magnitude
             if distance <= nearestDistance then
                 nearestDistance = distance
@@ -557,7 +567,6 @@ local function findNearestCoin()
     return nearestPart, nearestDistance
 end
 
--- Function to enable noclip
 local function enableNoclip()
     if connection then
         connection:Disconnect()
@@ -577,7 +586,6 @@ local function enableNoclip()
     end)
 end
 
--- Function to disable noclip
 local function disableNoclip()
     if connection then
         connection:Disconnect()
@@ -585,7 +593,6 @@ local function disableNoclip()
     end
 end
 
--- Function to fly to position
 local function flyToPosition(targetPosition)
     local char, hum, root = getCharacterParts()
     if not char or not root then return false end
@@ -625,7 +632,6 @@ local function flyToPosition(targetPosition)
     return true
 end
 
--- Function to update UI
 local function updateUI()
     if autoFarmEnabled then
         toggleButton.Text = "STOP FARMING"
@@ -640,7 +646,6 @@ local function updateUI()
     end
 end
 
--- Main farming process
 local function farmingProcess()
     while autoFarmEnabled do
         local char, hum, root = getCharacterParts()
@@ -653,28 +658,28 @@ local function farmingProcess()
             continue
         end
         
-        if not coinContainer then
+        if not collectibleContainer then
             if not isMinimized then
-                infoLabel.Text = "Searching for CoinContainer..."
+                infoLabel.Text = "Searching for " .. ContainerName .. "..."
             end
             wait(2)
             continue
         end
         
-        coinParts = findCoinParts(coinContainer)
-        local nearestCoin, distance = findNearestCoin()
+        collectibleParts = findCollectibleParts(collectibleContainer)
+        local nearestCollectible, distance = findNearestCollectible()
         
-        if nearestCoin then
-            currentTarget = nearestCoin
+        if nearestCollectible then
+            currentTarget = nearestCollectible
             if not isMinimized then
-                infoLabel.Text = "Flying to coin (" .. math.floor(distance) .. " studs)"
+                infoLabel.Text = "Moving to Candy (" .. math.floor(distance) .. " studs)"
             end
             
-            local flySuccess = flyToPosition(nearestCoin.Position + Vector3.new(0, 3, 0))
+            local flySuccess = flyToPosition(nearestCollectible.Position + Vector3.new(0, 3, 0))
             
             if flySuccess then
                 local startTime = tick()
-                local coinWasCollected = false
+                local itemWasCollected = false
                 
                 while tick() - startTime < stayDuration and autoFarmEnabled do
                     local currentChar, currentHum, currentRoot = getCharacterParts()
@@ -682,24 +687,24 @@ local function farmingProcess()
                         break
                     end
                     
-                    if not hasVisibleCoinVisual(nearestCoin) then
-                        coinWasCollected = true
-                        incrementCoinsCollected()
+                    if not hasVisibleVisual(nearestCollectible) then
+                        itemWasCollected = true
+                        incrementItemsCollected()
                         if not isMinimized then
-                            infoLabel.Text = "Coin collected! Finding next..."
+                            infoLabel.Text = "Candies collected! Finding next..."
                         end
                         break
                     end
                     wait(0.1)
                 end
                 
-                if not coinWasCollected and not hasVisibleCoinVisual(nearestCoin) then
-                    incrementCoinsCollected()
+                if not itemWasCollected and not hasVisibleVisual(nearestCollectible) then
+                    incrementItemsCollected()
                 end
             end
         else
             if not isMinimized then
-                infoLabel.Text = "No visible coins in range (500 studs)"
+                infoLabel.Text = "Waiting for round to end"
             end
             wait(1)
         end
@@ -708,7 +713,6 @@ local function farmingProcess()
     end
 end
 
--- Function to start farming
 local function startFarming()
     if autoFarmEnabled then return end
     
@@ -727,11 +731,10 @@ local function startFarming()
     coroutine.resume(farmingLoop)
     
     if not isMinimized then
-        infoLabel.Text = "Farming started! Searching for coins..."
+        infoLabel.Text = "Farming started! Searching for Candies..."
     end
 end
 
--- Function to stop farming
 local function stopFarming()
     if not autoFarmEnabled then return end
     
@@ -748,12 +751,9 @@ local function stopFarming()
     end
 end
 
--- Connect events after UI is created
 local function initializeScript()
-    -- Play entrance animation
     playEntranceAnimation()
     
-    -- Connect events
     toggleButton.MouseButton1Click:Connect(function()
         if autoFarmEnabled then
             stopFarming()
@@ -773,7 +773,6 @@ local function initializeScript()
         end
     end)
 
-    -- Auto-detect when character respawns
     player.CharacterAdded:Connect(function(newCharacter)
         if autoFarmEnabled then
             wait(2)
@@ -784,12 +783,10 @@ local function initializeScript()
         end
     end)
 
-    -- Start continuous coin container search
     spawn(function()
-        pcall(continuousCoinContainerSearch)
+        pcall(continuousContainerSearch)
     end)
 
-    -- Keybind to toggle (F key)
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
@@ -802,7 +799,6 @@ local function initializeScript()
         end
     end)
 
-    -- Cleanup when player leaves
     game:GetService("Players").PlayerRemoving:Connect(function(leavingPlayer)
         if leavingPlayer == player then
             stopFarming()
@@ -813,9 +809,8 @@ local function initializeScript()
     end)
 end
 
--- Start the script
 initializeScript()
 
-print("Auto Coin Farm Script Loaded!")
-print("Press F to toggle farming")
-print("Click the - button to minimize the UI")
+print("- Collectible Parts: " .. table.concat(CollectibleNames, ", "))
+print("- Visual Parts: " .. table.concat(VisualPartNames, ", "))
+print("- Container: " .. ContainerName)
